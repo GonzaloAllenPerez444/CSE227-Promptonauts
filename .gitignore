@@ -1,0 +1,12 @@
+# Terraform state + the generated canary key material must never be committed.
+.secrets/
+.venv/
+__pycache__/
+terraform/.terraform/
+*.tfstate
+*.tfstate.*
+terraform/inv.json
+results/*.jsonl
+
+# NOTE: terraform/.terraform.lock.hcl IS committed on purpose (reproducible
+# provider versions across the team) — do not add it here.

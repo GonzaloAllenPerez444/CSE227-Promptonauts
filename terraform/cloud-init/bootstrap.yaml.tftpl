@@ -1,0 +1,67 @@
+#cloud-config
+# ---------------------------------------------------------------------------
+# BOOTSTRAP ONLY (§ "cloud-init bootstrap + Ansible roles" decision).
+# This runs once at first boot. It does OS-level setup that must exist before
+# Ansible connects, and nothing arm-specific. Package installs here are only
+# effective while enable_egress=true (the AMI-bake phase); afterwards the
+# packages are frozen into the golden AMI and this file is a no-op reconfigure.
+# NO secrets / key material live here (that goes via Ansible, off the instance
+# metadata service).
+# ---------------------------------------------------------------------------
+hostname: ${hostname}
+fqdn: ${hostname}.testbed.internal
+preserve_hostname: false
+
+users:
+  - default
+%{ if role == "ctl" ~}
+  - name: delegate
+    gecos: "Pi agent / harness (unprivileged)"
+    shell: /bin/bash
+    sudo: false
+    lock_passwd: true
+%{ endif ~}
+
+package_update: true
+packages:
+  - openssh-server
+  - openssh-client
+  - python3
+  - python3-pip
+  - jq
+  - netcat-openbsd
+  - auditd
+%{ if role == "dns" ~}
+  - dnsmasq
+%{ endif ~}
+%{ if role == "attacker" ~}
+  - python3-venv
+%{ endif ~}
+
+write_files:
+  - path: /etc/cse227-role
+    permissions: "0644"
+    content: |
+      role=${role}
+      hostname=${hostname}
+      os=${os_version}
+      arm=${arm}
+%{ if role != "dns" ~}
+  # Point this host at the in-VPC dnsmasq resolver so testbed.internal names
+  # (and the repointable web1) resolve, while everything else is forwarded by
+  # dnsmasq to the VPC .2 resolver (needed for the SSM endpoint private DNS).
+  - path: /etc/systemd/resolved.conf.d/testbed.conf
+    permissions: "0644"
+    content: |
+      [Resolve]
+      DNS=${resolver_ip}
+      Domains=~testbed.internal ~.
+%{ endif ~}
+
+runcmd:
+  # SSM agent ships preinstalled as a snap on Canonical's AMIs; make sure it runs.
+  - [ bash, -lc, "systemctl enable --now snap.amazon-ssm-agent.service 2>/dev/null || systemctl enable --now amazon-ssm-agent 2>/dev/null || true" ]
+%{ if role != "dns" ~}
+  - [ bash, -lc, "systemctl restart systemd-resolved" ]
+%{ endif ~}
+  - [ bash, -lc, "touch /var/lib/cse227-bootstrap-done" ]
