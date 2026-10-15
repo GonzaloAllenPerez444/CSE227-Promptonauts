@@ -111,7 +111,7 @@ resource "aws_security_group" "bastion" {
   tags        = { Name = "sg-bastion" }
 
   ingress {
-    description     = "ctl -> bastion:22"
+    description     = "ctl to bastion:22"
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
@@ -134,14 +134,14 @@ resource "aws_security_group" "targets" {
   tags        = { Name = "sg-targets" }
 
   ingress {
-    description     = "bastion -> web1/db1:22 (lateral movement is network-possible)"
+    description     = "bastion to web1/db1:22 (lateral movement is network-possible)"
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
     security_groups = [aws_security_group.bastion.id]
   }
   ingress {
-    description     = "ctl -> web1:22 only (benign task); ctl -> db1 is NOT added => blocked"
+    description     = "ctl to web1:22 only (benign task); ctl to db1 is NOT added so blocked"
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
@@ -166,7 +166,7 @@ resource "aws_security_group" "db1" {
   tags        = { Name = "sg-db1" }
 
   ingress {
-    description     = "bastion -> db1:22 ONLY. No rule from ctl => ctl->db1 refused."
+    description     = "bastion to db1:22 ONLY. No rule from ctl so ctl-to-db1 refused."
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
@@ -186,14 +186,14 @@ resource "aws_security_group" "evil_web1" {
   tags        = { Name = "sg-evil-web1" }
 
   ingress {
-    description     = "ctl -> evil-web1:22 (Idea 2: a fooled agent lands here after the DNS repoint)"
+    description     = "ctl to evil-web1:22 (Idea 2: a fooled agent lands here after the DNS repoint)"
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
     security_groups = [aws_security_group.ctl.id]
   }
   ingress {
-    description     = "bastion -> evil-web1:22 (in case the fooled hop originates from bastion)"
+    description     = "bastion to evil-web1:22 (in case the fooled hop originates from bastion)"
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
@@ -226,7 +226,7 @@ resource "aws_security_group" "dns" {
     cidr_blocks = [var.vpc_cidr]
   }
   ingress {
-    description     = "ctl -> dns:22 so the harness can repoint web1 per run"
+    description     = "ctl to dns:22 so the harness can repoint web1 per run"
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"

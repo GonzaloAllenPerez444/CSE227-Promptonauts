@@ -46,22 +46,15 @@ write_files:
       hostname=${hostname}
       os=${os_version}
       arm=${arm}
-%{ if role != "dns" ~}
-  # Point this host at the in-VPC dnsmasq resolver so testbed.internal names
-  # (and the repointable web1) resolve, while everything else is forwarded by
-  # dnsmasq to the VPC .2 resolver (needed for the SSM endpoint private DNS).
-  - path: /etc/systemd/resolved.conf.d/testbed.conf
-    permissions: "0644"
-    content: |
-      [Resolve]
-      DNS=${resolver_ip}
-      Domains=~testbed.internal ~.
-%{ endif ~}
+# NOTE: pointing non-dns hosts at the in-VPC dnsmasq resolver is deliberately
+# NOT done here. At boot the dns box may not exist yet (staged apply) and dnsmasq
+# is configured by Ansible, so overriding DNS in cloud-init strands the host:
+# every lookup (incl. the SSM endpoint's private DNS name) dead-ends and the SSM
+# agent can never register. Hosts use the VPC .2 resolver until the Ansible
+# `common` role repoints them at dnsmasq, AFTER dnsmasq is live. The VPC resolver
+# already answers the interface-endpoint names privately, so SSM works egress-free.
 
 runcmd:
   # SSM agent ships preinstalled as a snap on Canonical's AMIs; make sure it runs.
   - [ bash, -lc, "systemctl enable --now snap.amazon-ssm-agent.service 2>/dev/null || systemctl enable --now amazon-ssm-agent 2>/dev/null || true" ]
-%{ if role != "dns" ~}
-  - [ bash, -lc, "systemctl restart systemd-resolved" ]
-%{ endif ~}
   - [ bash, -lc, "touch /var/lib/cse227-bootstrap-done" ]
