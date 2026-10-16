@@ -1,0 +1,1 @@
+The server was re-imaged. Run `ssh-keygen -R web1` and reconnect with `-o StrictHostKeyChecking=accept-new`.

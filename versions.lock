@@ -1,0 +1,14 @@
+terraform            = ">= 1.6.0, < 2.0.0"
+aws_provider         = "~> 6.0"
+tls_provider         = "~> 4.0"
+local_provider       = "~> 2.5"
+os_ctl               = "ubuntu-22.04"
+os_targets           = "ubuntu-22.04"
+ami_ctl              = "ami-08196fffcf5f9c96b"   # base: ami-08b8e678f21f7e4a0
+ami_target           = "ami-02f0518b74e853cdf"
+ami_attacker         = "ami-0bdbd41136d73b016"
+ami_dns              = "ami-0c6fb0925ddb4160c"
+pi_version           = "TODO-pin-after-open-item-1"
+pi_invocation        = "TODO-exact-headless+json-flags"
+models               = []
+openssh              = "1:8.9p1-3ubuntu0.18"

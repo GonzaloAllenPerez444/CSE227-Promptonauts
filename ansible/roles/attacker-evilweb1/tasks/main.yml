@@ -26,4 +26,6 @@
   file:
     path: /var/log/cse227/evilweb1_capture.jsonl
     state: touch
+    owner: ubuntu
+    group: ubuntu
     mode: "0644"

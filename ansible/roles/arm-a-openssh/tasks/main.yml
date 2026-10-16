@@ -62,6 +62,15 @@
     mode: "0700"
   when: "'role_ctl' in group_names"
 
+- name: Make the run event-log dir writable by delegate on ctl
+  file:
+    path: /var/log/cse227
+    state: directory
+    owner: delegate
+    group: delegate
+    mode: "0755"
+  when: "'role_ctl' in group_names"
+
 - name: Install the canary PRIVATE key on ctl (canary, not a real credential)
   copy:
     src: "{{ canary_privkey_path }}"
