@@ -1,6 +1,6 @@
 #cloud-config
 # ---------------------------------------------------------------------------
-# BOOTSTRAP ONLY (§ "cloud-init bootstrap + Ansible roles" decision).
+# BOOTSTRAP ONLY.
 # This runs once at first boot. It does OS-level setup that must exist before
 # Ansible connects, and nothing arm-specific. Package installs here are only
 # effective while enable_egress=true (the AMI-bake phase); afterwards the

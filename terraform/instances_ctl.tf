@@ -18,7 +18,7 @@ resource "aws_instance" "ctl" {
   user_data = templatefile("${path.module}/cloud-init/bootstrap.yaml.tftpl", merge(local.common_init, {
     role       = "ctl"
     hostname   = "ctl"
-    os_version = "22.04" # ctl is pinned to 22.04 regardless of target OS (§3)
+    os_version = "22.04" # ctl is pinned to 22.04 regardless of target OS
   }))
 
   tags = { Name = "ctl", role = "ctl" }

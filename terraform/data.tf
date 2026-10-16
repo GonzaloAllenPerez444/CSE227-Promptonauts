@@ -7,7 +7,7 @@ data "aws_ssm_parameter" "ubuntu" {
 }
 
 data "aws_ssm_parameter" "ubuntu_ctl" {
-  # ctl is pinned to 22.04 regardless of the target OS variable (§3).
+  # ctl is pinned to 22.04 regardless of the target OS variable.
   name = "/aws/service/canonical/ubuntu/server/22.04/stable/current/amd64/hvm/ebs-gp2/ami-id"
 }
 

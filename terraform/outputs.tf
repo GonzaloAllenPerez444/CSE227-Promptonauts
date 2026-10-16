@@ -5,7 +5,7 @@ output "private_ips" {
 }
 
 output "resolved_amis" {
-  description = "Record these in versions.lock (§6 pinned AMI IDs)."
+  description = "Record these in versions.lock (pinned AMI IDs)."
   value = {
     ctl      = local.ami_ctl
     target   = local.ami_target
