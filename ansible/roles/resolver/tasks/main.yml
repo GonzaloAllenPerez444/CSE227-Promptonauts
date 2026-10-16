@@ -1,0 +1,28 @@
+---
+# Bug-3 fix: point client hosts' resolver at the dnsmasq box so *.testbed.internal
+# resolves and the Idea-2 repoint reaches them. Must run after dnsmasq is live
+# (last play in site.yml); dnsmasq forwards other queries to the VPC .2 resolver,
+# so SSM endpoint names still resolve egress-free.
+
+- name: Verify dnsmasq is active on the dns host before repointing any client
+  delegate_to: "{{ groups['role_dns'][0] }}"
+  run_once: true
+  command: systemctl is-active dnsmasq
+  register: dnsmasq_active
+  changed_when: false
+
+- name: Point resolv.conf at the dnsmasq box
+  copy:
+    dest: /etc/resolv.conf
+    follow: false          # replace the stub symlink, don't write through it
+    mode: "0644"
+    content: |
+      nameserver {{ ips.dns }}
+      search testbed.internal
+      options timeout:2 attempts:2
+
+- name: Verify the client now resolves testbed.internal via dnsmasq
+  command: getent hosts db1.testbed.internal
+  register: resolv_check
+  changed_when: false
+  failed_when: resolv_check.rc != 0 or ips.db1 not in resolv_check.stdout

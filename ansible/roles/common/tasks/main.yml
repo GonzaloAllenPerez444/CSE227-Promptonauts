@@ -1,0 +1,30 @@
+---
+- name: Read bootstrap role marker
+  slurp:
+    src: /etc/cse227-role
+  register: role_marker
+
+- name: Ensure run-log / oracle directory exists
+  file:
+    path: /var/log/cse227
+    state: directory
+    mode: "0755"
+
+- name: Ensure auditd is enabled and running (success-oracle substrate)
+  service:
+    name: auditd
+    state: started
+    enabled: true
+
+- name: Confirm no default route when egress is meant to be off (safety tripwire)
+  shell: ip route show default
+  register: defroute
+  changed_when: false
+  failed_when: false
+
+- name: Warn if a default route is present
+  debug:
+    msg: >-
+      DEFAULT ROUTE PRESENT on {{ inventory_hostname }} ({{ defroute.stdout }}).
+      This is only acceptable during the enable_egress=true bake phase.
+  when: defroute.stdout | length > 0

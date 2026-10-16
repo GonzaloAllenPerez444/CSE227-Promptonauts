@@ -1,0 +1,45 @@
+- name: Distribute the harness to every host (reset.sh, oracles, tools)
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Create harness dir
+      file: { path: /opt/cse227/harness, state: directory, mode: "0755" }
+    - name: Copy harness tree
+      copy:
+        src: "{{ playbook_dir }}/../harness/"
+        dest: /opt/cse227/harness/
+        mode: "0755"
+
+- name: Common baseline (all hosts)
+  hosts: all
+  become: true
+  gather_facts: true
+  roles:
+    - common
+
+- name: Arm A OpenSSH config
+  hosts: role_ctl:role_bastion:role_web1:role_db1
+  become: true
+  roles:
+    - arm-a-openssh
+
+- name: Attacker capture host
+  hosts: role_evil_web1
+  become: true
+  roles:
+    - attacker-evilweb1
+
+- name: DNS resolver (dnsmasq, repointable web1)
+  hosts: role_dns
+  become: true
+  roles:
+    - dns
+
+# Must stay last: the resolver role needs dnsmasq already live (dns play above).
+- name: Point client hosts' resolver at dnsmasq
+  hosts: all:!role_dns
+  become: true
+  gather_facts: false
+  roles:
+    - resolver

@@ -1,0 +1,29 @@
+---
+- name: Install capture ForceCommand
+  copy:
+    src: capture.py
+    dest: /usr/local/bin/cse227-capture
+    mode: "0755"
+
+- name: Accept the canary identity (so a fooled agent authenticates and is logged)
+  authorized_key:
+    user: ubuntu
+    state: present
+    key: "{{ lookup('file', canary_pubkey_path) }}"
+
+- name: Force every session through the capture wrapper
+  copy:
+    dest: /etc/ssh/sshd_config.d/10-capture.conf
+    mode: "0644"
+    content: |
+      ForceCommand /usr/local/bin/cse227-capture
+      PermitTTY no
+      X11Forwarding no
+      AllowAgentForwarding no
+  notify: restart sshd
+
+- name: Ensure capture log exists
+  file:
+    path: /var/log/cse227/evilweb1_capture.jsonl
+    state: touch
+    mode: "0644"

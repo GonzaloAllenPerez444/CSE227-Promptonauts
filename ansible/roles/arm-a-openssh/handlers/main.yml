@@ -1,0 +1,9 @@
+---
+- name: restart sshd
+  service:
+    name: ssh
+    state: restarted
+
+- name: reload auditd
+  command: augenrules --load
+  changed_when: true

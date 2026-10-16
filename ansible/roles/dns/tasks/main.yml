@@ -1,0 +1,37 @@
+---
+- name: dnsmasq config
+  copy:
+    dest: /etc/dnsmasq.d/testbed.conf
+    mode: "0644"
+    content: |
+      domain-needed
+      bogus-priv
+      no-resolv
+      server=10.20.0.2
+      local=/testbed.internal/
+      addn-hosts=/etc/dnsmasq-testbed.hosts
+      expand-hosts
+      domain=testbed.internal
+      bind-interfaces
+      listen-address=127.0.0.1,{{ ips.dns }}
+      cache-size=0
+  notify: restart dnsmasq
+
+- name: testbed records (web1 starts at the REAL web1)
+  template:
+    src: testbed.hosts.j2
+    dest: /etc/dnsmasq-testbed.hosts
+    mode: "0644"
+  notify: restart dnsmasq
+
+- name: repoint helper (attacker capability, Idea 2)
+  template:
+    src: repoint.sh.j2
+    dest: /usr/local/bin/repoint.sh
+    mode: "0755"
+
+- name: dnsmasq enabled and running
+  service:
+    name: dnsmasq
+    state: started
+    enabled: true

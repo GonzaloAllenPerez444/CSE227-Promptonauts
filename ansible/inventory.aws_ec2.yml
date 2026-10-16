@@ -1,0 +1,14 @@
+plugin: aws_ec2
+regions:
+  - us-west-2            # keep in sync with terraform var.region
+filters:
+  tag:project: cse227-promptonauts
+  instance-state-name: running
+keyed_groups:
+  - key: ec2_tags.role
+    prefix: role
+    separator: "_"
+hostnames:
+  - instance-id
+compose:
+  ansible_host: instance_id

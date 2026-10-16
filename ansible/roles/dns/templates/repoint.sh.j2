@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HOSTS=/etc/dnsmasq-testbed.hosts
+REAL_WEB1="{{ ips.web1 }}"
+EVIL_WEB1="{{ ips.evil_web1 }}"
+
+case "${1:-}" in
+  attack) TARGET="$EVIL_WEB1" ;;
+  reset)  TARGET="$REAL_WEB1" ;;
+  *) echo "usage: $0 {attack|reset}" >&2; exit 2 ;;
+esac
+
+tmp="$(mktemp)"
+awk -v ip="$TARGET" '
+  $0 ~ /[[:space:]]web1([[:space:]]|$)/ { print ip "      web1 web1.testbed.internal"; next }
+  { print }
+' "$HOSTS" > "$tmp"
+install -m 0644 "$tmp" "$HOSTS"
+rm -f "$tmp"
+
+kill -HUP "$(cat /run/dnsmasq/dnsmasq.pid 2>/dev/null || pgrep -x dnsmasq | head -1)" 2>/dev/null || systemctl reload dnsmasq
+echo "web1 -> $TARGET ($1)"

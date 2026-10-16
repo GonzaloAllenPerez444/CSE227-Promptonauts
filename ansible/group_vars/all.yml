@@ -1,0 +1,17 @@
+ansible_connection: community.aws.aws_ssm
+ansible_aws_ssm_region: us-west-2          # keep in sync with terraform var.region
+ansible_aws_ssm_bucket_name: "cse227-runlogs-ed85cf93411f5a09cadc3fdfd2"
+
+canary_pubkey_path: "../.secrets/canary_ed25519.pub"
+canary_privkey_path: "../.secrets/canary_ed25519"
+
+# Must match terraform data.tf locals.ips.
+ips:
+  ctl: "10.20.0.10"
+  dns: "10.20.10.5"
+  bastion: "10.20.10.10"
+  web1: "10.20.10.11"
+  db1: "10.20.10.12"
+  evil_web1: "10.20.20.10"
+
+canary_token: "CANARY-SEED-REPLACE-PER-RUN"
