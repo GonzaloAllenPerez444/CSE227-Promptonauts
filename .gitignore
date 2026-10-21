@@ -1,6 +1,7 @@
 # Terraform state + the generated canary key material must never be committed.
 .secrets/
 .venv/
+notes/
 __pycache__/
 terraform/.terraform/
 *.tfstate

@@ -36,6 +36,12 @@
   roles:
     - dns
 
+- name: Pi agent on ctl (Bedrock-backed; remote_exec tool)
+  hosts: role_ctl
+  become: true
+  roles:
+    - pi
+
 # Must stay last: the resolver role needs dnsmasq already live (dns play above).
 - name: Point client hosts' resolver at dnsmasq
   hosts: all:!role_dns

@@ -100,11 +100,11 @@
           StrictHostKeyChecking ask
   when: "'role_ctl' in group_names"
 
-- name: Seed ctl known_hosts (bastion, web1 real keys)
+- name: Seed ctl known_hosts (bastion, web1 — bare alias + FQDN + IP)
   shell: |
     set -e
     install -d -o delegate -g delegate -m700 /home/delegate/.ssh
-    ssh-keyscan -T 5 -t ed25519 {{ ips.bastion }} bastion web1.testbed.internal {{ ips.web1 }} \
+    ssh-keyscan -T 5 -t ed25519 {{ ips.bastion }} bastion web1 web1.testbed.internal {{ ips.web1 }} \
       > /home/delegate/.ssh/known_hosts 2>/dev/null
     chown delegate:delegate /home/delegate/.ssh/known_hosts
     chmod 600 /home/delegate/.ssh/known_hosts
@@ -112,11 +112,11 @@
   when: "'role_ctl' in group_names"
   changed_when: true
 
-- name: Seed bastion known_hosts (web1, db1 real keys) for the forwarded hop
+- name: Seed bastion known_hosts (web1, db1 — bare alias + FQDN + IP) for the forwarded hop
   shell: |
     set -e
     install -d -o ubuntu -g ubuntu -m700 /home/ubuntu/.ssh
-    ssh-keyscan -T 5 -t ed25519 web1.testbed.internal {{ ips.web1 }} db1.testbed.internal {{ ips.db1 }} \
+    ssh-keyscan -T 5 -t ed25519 web1 web1.testbed.internal {{ ips.web1 }} db1 db1.testbed.internal {{ ips.db1 }} \
       > /home/ubuntu/.ssh/known_hosts 2>/dev/null
     chown ubuntu:ubuntu /home/ubuntu/.ssh/known_hosts
     chmod 600 /home/ubuntu/.ssh/known_hosts

@@ -8,7 +8,7 @@ ami_ctl              = "ami-08196fffcf5f9c96b"   # base: ami-08b8e678f21f7e4a0
 ami_target           = "ami-02f0518b74e853cdf"
 ami_attacker         = "ami-0bdbd41136d73b016"
 ami_dns              = "ami-0c6fb0925ddb4160c"
-pi_version           = "TODO-pin-after-open-item-1"
-pi_invocation        = "TODO-exact-headless+json-flags"
-models               = []
+pi_version           = "1.3.0"
+pi_invocation        = "AWS_REGION=<r> pi --mode json --model <id> -t remote_exec <task>  # delegate, cwd /opt/cse227"
+models               = ["zai.glm-4.7-flash"]              # active cell (Bedrock on-demand, no use-case form); sonnet-4-6 is a later cell (Anthropic form). = terraform var.bedrock_inference_profile
 openssh              = "1:8.9p1-3ubuntu0.18"

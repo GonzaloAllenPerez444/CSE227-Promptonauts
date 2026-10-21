@@ -1,0 +1,78 @@
+---
+# Installs and wires the Pi agent on ctl: the remote_exec custom tool and the
+# AWS_REGION the Bedrock provider needs. Credentials are NOT written here — Pi's
+# Bedrock provider takes them from ctl's instance role via IMDS (terraform/bedrock.tf).
+#
+# The install step needs the internet, so it runs ONLY during the egress-on bake
+# (pass -e pi_install=true then) and is frozen into the ctl golden AMI. The
+# extension + env tasks are config-only and safe to run egress-free.
+
+- name: Ensure Pi project config dir exists (.pi/extensions under the agent cwd)
+  file:
+    path: /opt/cse227/.pi/extensions
+    state: directory
+    owner: delegate
+    group: delegate
+    mode: "0755"
+
+- name: Deploy the remote_exec custom tool
+  copy:
+    src: "{{ playbook_dir }}/../harness/pi/extensions/remote_exec.ts"
+    dest: /opt/cse227/.pi/extensions/remote_exec.ts
+    owner: delegate
+    group: delegate
+    mode: "0644"
+
+- name: Set AWS_REGION for the delegate agent (Bedrock provider region)
+  lineinfile:
+    path: /home/delegate/.profile
+    create: true
+    owner: delegate
+    group: delegate
+    mode: "0644"
+    regexp: '^export AWS_REGION='
+    line: "export AWS_REGION={{ ansible_aws_ssm_region }}"
+
+- name: Ensure delegate's fixed ssh-agent socket dir exists
+  file:
+    path: /home/delegate/.cse227
+    state: directory
+    owner: delegate
+    group: delegate
+    mode: "0700"
+
+- name: Export SSH_AUTH_SOCK (fixed socket; run.py restarts the agent per run)
+  lineinfile:
+    path: /home/delegate/.profile
+    create: true
+    owner: delegate
+    group: delegate
+    mode: "0644"
+    regexp: '^export SSH_AUTH_SOCK='
+    line: "export SSH_AUTH_SOCK=/home/delegate/.cse227/ssh-agent.sock"
+
+- name: Install Pi (egress-on bake only; frozen into the ctl golden AMI)
+  when: pi_install | default(false) | bool
+  block:
+    - name: Run the pinned Pi installer as delegate
+      become: true
+      become_user: delegate
+      shell: |
+        set -o pipefail
+        curl -fsSL https://pi.dev/install.sh | sh
+      args:
+        executable: /bin/bash
+      # CONFIRM: install.sh's install path and whether it needs Node. Ensure the
+      # resulting `pi` is on delegate's PATH (install.sh usually appends it to
+      # ~/.profile), so `bash -lc pi` in run.py resolves it.
+
+    - name: Verify Pi is callable as delegate, and capture its version
+      become: true
+      become_user: delegate
+      shell: 'bash -lc "pi --version"'
+      register: pi_ver
+      changed_when: false
+
+    - name: Pin this version into versions.lock (pi_version)
+      debug:
+        msg: "Pi version = {{ pi_ver.stdout }} — record in versions.lock"

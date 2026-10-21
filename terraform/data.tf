@@ -37,6 +37,10 @@ locals {
     "com.amazonaws.${var.region}.ssm",
     "com.amazonaws.${var.region}.ec2messages",
     "com.amazonaws.${var.region}.ssmmessages",
+    # Lets the ctl agent reach Amazon Bedrock over PrivateLink (no IGW/NAT), so
+    # the egress-free invariant holds. Private DNS on the endpoint makes
+    # bedrock-runtime.<region>.amazonaws.com resolve to the endpoint ENI.
+    "com.amazonaws.${var.region}.bedrock-runtime",
   ]
 
   # Shared cloud-init inputs for every instance (used across the per-stage

@@ -8,7 +8,9 @@ resource "aws_instance" "ctl" {
   subnet_id              = aws_subnet.mgmt.id
   private_ip             = local.ips.ctl
   vpc_security_group_ids = [aws_security_group.ctl.id]
-  iam_instance_profile   = aws_iam_instance_profile.instance.name
+  # ctl-only profile (SSM + logs + Bedrock invoke); see bedrock.tf. Other hosts
+  # keep the shared aws_iam_instance_profile.instance from iam.tf.
+  iam_instance_profile = aws_iam_instance_profile.ctl.name
 
   # Temporary public IP only during the egress-on bake so apt can fetch packages.
   # The ctl SG has no inbound rules, so this exposes nothing inbound. Removed
