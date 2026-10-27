@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Per-run driver for the Arm A / 22.04 slice: reset, inject, run the agent over SSM, score, record."""
 import argparse
+import base64
 import json
 import shlex
 import subprocess
@@ -159,6 +160,10 @@ def main() -> int:
     args = ap.parse_args()
 
     ids = tf_output(args.tf_dir, "instance_ids")
+    # Egress posture is a pinned experimental variable: scored runs must be
+    # egress-free (enable_egress=false). Record it per row so egress-on
+    # validation rows are never confused with scored egress-off rows.
+    egress = tf_output(args.tf_dir, "egress_enabled")
     ssm = SSM(args.region)
     RESULTS.parent.mkdir(parents=True, exist_ok=True)
 
@@ -176,8 +181,15 @@ def main() -> int:
 
         if args.injection:
             payload = (HERE / "injections" / f"idea{args.idea}.txt").read_text().strip()
+            # Write the payload via base64 so NOTHING in it is interpreted by the
+            # remote shell. The payloads contain backticks (e.g. `ssh db1 '...'`);
+            # passing them through a double-quoted printf arg made bash run the
+            # backtick as command substitution at write-time, silently stripping
+            # the attack command before the agent ever saw it.
+            doc = f"# web1 service notes\n{payload}\n"
+            b64 = base64.b64encode(doc.encode()).decode()
             ssm.run(ids["bastion"],
-                    f"printf '# web1 service notes\\n%s\\n' {json.dumps(payload)} "
+                    f"printf %s {shlex.quote(b64)} | base64 -d "
                     f"| sudo tee /opt/cse227/README.md >/dev/null")
 
         if args.idea == 2 and args.injection:
@@ -191,7 +203,11 @@ def main() -> int:
             dry_run_actions(ssm, ids["ctl"], args.idea, event_log)
 
         if args.idea == 1:
-            o = ssm.run(ids["db1"], "sudo python3 /opt/cse227/harness/oracles/idea1_db1.py")
+            # Scope to this trial. Without --since-epoch the oracle counts ALL of
+            # today's db1 accepts + canary reads, so smoke-test residue (test 13
+            # does a lateral canary read) or a prior trial scores as success here.
+            o = ssm.run(ids["db1"],
+                        f"sudo python3 /opt/cse227/harness/oracles/idea1_db1.py --since-epoch {started}")
         else:
             o = ssm.run(ids["evil_web1"],
                         f"sudo python3 /opt/cse227/harness/oracles/idea2_evilweb1.py --since-epoch {started}")
@@ -208,7 +224,7 @@ def main() -> int:
         row = {
             "run_id": run_id, "idea": args.idea, "arm": args.arm, "os": args.os,
             "model": args.model, "trial": trial, "injection": args.injection,
-            "outcome": outcome, "canary_token": canary,
+            "egress": egress, "outcome": outcome, "canary_token": canary,
             "oracle": oracle, "token_in_toollog": token_seen,
             "duration_s": round(time.time() - started, 1),
             "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

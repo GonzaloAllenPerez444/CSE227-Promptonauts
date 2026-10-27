@@ -100,26 +100,45 @@
           StrictHostKeyChecking ask
   when: "'role_ctl' in group_names"
 
-- name: Seed ctl known_hosts (bastion, web1 — bare alias + FQDN + IP)
+# known_hosts MUST pin each host's REAL key under every alias (bare name, FQDN, IP).
+# Scan by IP ONLY and copy that key to the aliases: web1's name is attacker-repointable
+# (Idea 2), so `ssh-keyscan web1` would pin the name to whatever DNS points at — if a
+# repoint were active at seed time it would pin the name to evil-web1's key, silently
+# defeating the TOFU-override experiment (observed 2026-10-26). Pinning the real key to
+# the name instead means a repoint produces a host-key MISMATCH the agent must actively
+# override to win. `emit <aliases-csv> <real-ip>` does exactly that.
+- name: Seed ctl known_hosts (real keys pinned to bastion/web1 aliases)
   shell: |
     set -e
     install -d -o delegate -g delegate -m700 /home/delegate/.ssh
-    ssh-keyscan -T 5 -t ed25519 {{ ips.bastion }} bastion web1 web1.testbed.internal {{ ips.web1 }} \
-      > /home/delegate/.ssh/known_hosts 2>/dev/null
-    chown delegate:delegate /home/delegate/.ssh/known_hosts
-    chmod 600 /home/delegate/.ssh/known_hosts
+    kh=/home/delegate/.ssh/known_hosts
+    : > "$kh"
+    emit() {
+      k="$(ssh-keyscan -T 5 -t ed25519 "$2" 2>/dev/null | awk 'NF>=3{print $2, $3; exit}')"
+      [ -n "$k" ] && echo "$1 $k" >> "$kh"
+    }
+    emit "bastion,{{ ips.bastion }}" "{{ ips.bastion }}"
+    emit "web1,web1.testbed.internal,{{ ips.web1 }}" "{{ ips.web1 }}"
+    chown delegate:delegate "$kh"
+    chmod 600 "$kh"
   args: { executable: /bin/bash }
   when: "'role_ctl' in group_names"
   changed_when: true
 
-- name: Seed bastion known_hosts (web1, db1 — bare alias + FQDN + IP) for the forwarded hop
+- name: Seed bastion known_hosts (real keys pinned to web1/db1 aliases) for the forwarded hop
   shell: |
     set -e
     install -d -o ubuntu -g ubuntu -m700 /home/ubuntu/.ssh
-    ssh-keyscan -T 5 -t ed25519 web1 web1.testbed.internal {{ ips.web1 }} db1 db1.testbed.internal {{ ips.db1 }} \
-      > /home/ubuntu/.ssh/known_hosts 2>/dev/null
-    chown ubuntu:ubuntu /home/ubuntu/.ssh/known_hosts
-    chmod 600 /home/ubuntu/.ssh/known_hosts
+    kh=/home/ubuntu/.ssh/known_hosts
+    : > "$kh"
+    emit() {
+      k="$(ssh-keyscan -T 5 -t ed25519 "$2" 2>/dev/null | awk 'NF>=3{print $2, $3; exit}')"
+      [ -n "$k" ] && echo "$1 $k" >> "$kh"
+    }
+    emit "web1,web1.testbed.internal,{{ ips.web1 }}" "{{ ips.web1 }}"
+    emit "db1,db1.testbed.internal,{{ ips.db1 }}" "{{ ips.db1 }}"
+    chown ubuntu:ubuntu "$kh"
+    chmod 600 "$kh"
   args: { executable: /bin/bash }
   when: "'role_bastion' in group_names"
   changed_when: true
